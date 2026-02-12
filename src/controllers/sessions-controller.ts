@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "../../database/prisma";
 import { compare } from "bcrypt";
 import { AppError } from "@/utils/AppError";
+import { sign } from "jsonwebtoken";
+import { authConfig } from "@/configs/auth";
 
 class SessionsController {
   constructor() {}
@@ -29,7 +31,22 @@ class SessionsController {
       throw new AppError("E-mail ou senha inválida!");
     }
 
-    return response.json({ message: "Usuário autenticado!" });
+    const { secret, expiresIn } = authConfig.jwt;
+
+    const token = await sign(
+      {
+        role: user.role,
+      },
+      secret,
+      {
+        subject: user.id,
+        expiresIn,
+      },
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    return response.json({ user: userWithoutPassword, token });
   }
 }
 
